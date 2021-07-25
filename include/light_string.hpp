@@ -3,13 +3,14 @@
 
 #include <algorithm>
 #include <cstring>
-#include <string>
 #include <ostream>
+#include <string>
 
 class light_string {
   char *buf;
 
 public:
+  light_string() { buf = nullptr; }
   explicit light_string(char *s) {
     auto size = strlen(s);
     buf = new char[size + 1];
@@ -21,51 +22,70 @@ public:
   }
 
   ~light_string() {
-    if (buf){
+    if (buf) {
       delete[] buf;
       buf = nullptr;
     }
-      
   }
 
-  light_string(const light_string &other) noexcept{
+  light_string(const light_string &other) noexcept {
     auto size = strlen(other.buf);
     buf = new char[size + 1];
     strcpy(buf, other.buf);
   }
 
-  light_string(light_string &&other) noexcept{
+  light_string(light_string &&other) noexcept {
     buf = nullptr;
     std::swap(buf, other.buf);
   }
 
-  light_string &operator=(const light_string &other) noexcept{
+  light_string &operator=(const light_string &other) noexcept {
     auto size = strlen(other.buf);
     buf = new char[size + 1];
     strcpy(buf, other.buf);
     return *this;
   }
 
-  light_string &operator=(light_string &&other) noexcept{
+  light_string &operator=(light_string &&other) noexcept {
     buf = nullptr;
     std::swap(buf, other.buf);
     return *this;
   }
 
-  bool operator==(const light_string &rhs) const { return strcmp(buf, rhs.buf) == 0; }
+  bool operator==(const light_string &rhs) const {
+    if (!buf)
+      return rhs.buf;
+    return strcmp(buf, rhs.buf) == 0;
+  }
 
   bool operator!=(const light_string &rhs) const { return !(*this == rhs); }
-  bool operator<(const light_string &rhs) const { return strcmp(buf, rhs.buf) < 0; }
+  bool operator<(const light_string &rhs) const {
+    if (!buf)
+      return rhs.buf;
+    return strcmp(buf, rhs.buf) < 0;
+  }
   bool operator>(const light_string &rhs) const { return !(*this < rhs); }
-  bool operator<=(const light_string &rhs) const { return strcmp(buf, rhs.buf) <= 0; }
-  bool operator>=(const light_string &rhs) const { return strcmp(buf, rhs.buf) >= 0; }
+  bool operator<=(const light_string &rhs) const {
+    if (!buf)
+      return true;
+    return strcmp(buf, rhs.buf) <= 0;
+  }
+  bool operator>=(const light_string &rhs) const {
+    if (!buf)
+      return rhs.buf;
+    return strcmp(buf, rhs.buf) >= 0;
+  }
 
-  friend std::ostream & operator<<(std::ostream &output, const light_string& s){
+  friend std::ostream &operator<<(std::ostream &output, const light_string &s) {
+    if (!s.buf)
+      return output;
     output << s.buf;
     return output;
   }
 
-  unsigned long size() const{
+  unsigned long size() const {
+    if (!buf)
+      return 0;
     return strlen(buf);
   }
 };

@@ -9,10 +9,11 @@
 #include <memory>
 #include <queue>
 #include <regex>
+#include <set>
 #include <sstream>
 #include <string>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 #include "quicksort.hpp"
 
@@ -29,15 +30,15 @@ template <typename Comparator> struct PairComp {
 
 template <typename Comparator>
 static void parallel_sort(std::vector<light_string> &data, int max_workers,
-                          unsigned long segment_size,
+                          unsigned long segment_size, bool remove_duplicates,
                           Comparator &comparator) {
 
   std::vector<int> offsets = {0};
   std::unordered_set<int> offsets_set;
   unsigned long acc_size = data[0].size();
-  for(int i = 1; i < static_cast<int>(data.size()); i++ ){
+  for (int i = 1; i < static_cast<int>(data.size()); i++) {
     acc_size += data[i].size();
-    if(acc_size >= segment_size){
+    if (acc_size >= segment_size) {
       offsets.push_back(i);
       offsets_set.insert(i);
       acc_size = 0;
@@ -46,18 +47,22 @@ static void parallel_sort(std::vector<light_string> &data, int max_workers,
   offsets.push_back(data.size());
   offsets_set.insert(data.size());
 
-  int parts = offsets.size() -1;
+  int parts = offsets.size() - 1;
   int workers = std::min(max_workers, parts);
   if (workers == 1) {
     std::sort(data.begin(), data.end(), comparator);
+    if (remove_duplicates)
+      data.erase(std::unique(data.begin(), data.end()), data.end());
+
     return;
   }
 
   ParallelWorkerPool pool(workers);
 
-  for(int i = 0; i < parts; i++){
-    pool.add_task([i, &offsets, &data, &comparator](){
-      std::sort(data.begin()+offsets[i], data.begin() + offsets[i+1], comparator);
+  for (int i = 0; i < parts; i++) {
+    pool.add_task([i, &offsets, &data, &comparator]() {
+      std::sort(data.begin() + offsets[i], data.begin() + offsets[i + 1],
+                comparator);
     });
   }
 
@@ -66,50 +71,49 @@ static void parallel_sort(std::vector<light_string> &data, int max_workers,
 
   std::vector<light_string> result;
 
-  std::priority_queue<pair_string_int, std::vector<pair_string_int>, PairComp<Comparator>> pqueue;
+  std::priority_queue<pair_string_int, std::vector<pair_string_int>,
+                      PairComp<Comparator>>
+      pqueue;
 
-  for(int i = 0; i < parts; i++){
+  for (int i = 0; i < parts; i++) {
     pqueue.push({data[offsets[i]], offsets[i]});
   }
 
-  while(!pqueue.empty()){
+  while (!pqueue.empty()) {
     auto &current = pqueue.top();
     result.push_back(current.first);
     int next = current.second + 1;
     pqueue.pop();
-    if(offsets_set.find(next) != offsets_set.end()){
+    if (offsets_set.find(next) != offsets_set.end()) {
       continue;
     }
     pqueue.push({data[next], next});
   }
 
   data = std::move(result);
-  
+  if (remove_duplicates)
+    data.erase(std::unique(data.begin(), data.end()), data.end());
 }
 
 template <typename Comparator>
-static void create_file_part(
-  const std::string &input_filename_base,
-   const std::string &tmp_dir,
-  int workers, // workers,
-  std::vector<char> &buffer_out,
-  Comparator &comparator,
-  unsigned long &accumulated_size,
-  std::vector<light_string> &data,
-  int &current_file_index,
-  std::vector<std::string> &filenames
-){
+static void
+create_file_part(const std::string &input_filename_base,
+                 const std::string &tmp_dir,
+                 int workers, // workers,
+                 std::vector<char> &buffer_out, Comparator &comparator,
+                 unsigned long &accumulated_size,
+                 std::vector<light_string> &data, int &current_file_index,
+                 std::vector<std::string> &filenames, bool remove_duplicates) {
   accumulated_size = 0;
-  auto filename =
-      (std::filesystem::path(tmp_dir) /
-        std::filesystem::path(input_filename_base + "-p" +
-                              std::to_string(current_file_index++)))
-          .string();
+  auto filename = (std::filesystem::path(tmp_dir) /
+                   std::filesystem::path(input_filename_base + "-p" +
+                                         std::to_string(current_file_index++)))
+                      .string();
   std::ofstream ofs(filename, std::ios::out);
   ofs.rdbuf()->pubsetbuf(buffer_out.data(), buffer_out.size());
   filenames.push_back(filename);
   // std::sort(data.begin(), data.end(), comparator);
-  parallel_sort(data, workers, 1'000'000'000, comparator);
+  parallel_sort(data, workers, 1'000'000'000, remove_duplicates, comparator);
   for (auto &line : data) {
     ofs << line << '\n';
   }
@@ -119,10 +123,9 @@ static void create_file_part(
 template <typename Comparator>
 static std::vector<std::string>
 split_file(const std::string &input_filename, const std::string &tmp_dir,
-           unsigned long memory_budget,
-           int workers,
+           unsigned long memory_budget, int workers,
            std::vector<char> &buffer_in, std::vector<char> &buffer_out,
-           Comparator &comparator) {
+           bool remove_duplicates, Comparator &comparator) {
 
   std::vector<std::string> filenames;
   std::ifstream input_file(input_filename, std::ios::in);
@@ -136,51 +139,20 @@ split_file(const std::string &input_filename, const std::string &tmp_dir,
 
   std::string line;
   while (std::getline(input_file, line)) {
-    if (accumulated_size >= memory_budget/3) {
-      create_file_part(input_filename, tmp_dir, workers, buffer_out, comparator, accumulated_size, data, current_file_index, filenames);
+    if (accumulated_size >= memory_budget / 3) {
+      create_file_part(input_filename, tmp_dir, workers, buffer_out, comparator,
+                       accumulated_size, data, current_file_index, filenames,
+                       remove_duplicates);
     }
     data.push_back(light_string(line));
     accumulated_size += (line.size() + 1) * sizeof(char) +
                         sizeof(light_string) + sizeof(light_string *);
   }
-  if(accumulated_size > 0)
-    create_file_part(input_filename, tmp_dir, workers, buffer_out, comparator, accumulated_size, data, current_file_index, filenames);
+  if (accumulated_size > 0)
+    create_file_part(input_filename, tmp_dir, workers, buffer_out, comparator,
+                     accumulated_size, data, current_file_index, filenames,
+                     remove_duplicates);
   return filenames;
-}
-
-template <typename Comparator>
-static void sort_file(const std::string &filename,
-                      int, // workers add later
-                      std::vector<char> &buffer_in,
-                      std::vector<char> &buffer_out, Comparator &comparator) {
-  std::vector<light_string> data;
-
-  std::ifstream ifs(filename, std::ios::in);
-  ifs.rdbuf()->pubsetbuf(buffer_in.data(), buffer_in.size());
-  std::string line;
-  while (std::getline(ifs, line)) {
-    data.push_back(light_string(line));
-  }
-  ifs.close();
-  std::sort(data.begin(), data.end(), comparator);
-  /// inplace_quicksort(data, comparator);
-
-  std::ofstream ofs(filename, std::ios::out | std::ios::trunc);
-  ofs.rdbuf()->pubsetbuf(buffer_out.data(), buffer_out.size());
-  for (auto &item : data) {
-    ofs << item << '\n';
-  }
-  ofs.flush();
-  ofs.close();
-}
-
-template <typename Comparator>
-static void sort_files(const std::vector<std::string> &filenames, int workers,
-                       std::vector<char> &buffer_in,
-                       std::vector<char> &buffer_out, Comparator &comparator) {
-  for (const auto &file : filenames) {
-    sort_file(file, workers, buffer_in, buffer_out, comparator);
-  }
 }
 
 std::string concatenate_filenames(const std::vector<std::string> &filenames) {
@@ -212,8 +184,6 @@ static bool fill_with_file(std::list<light_string> &data_block,
   return !data_block.empty();
 }
 
-
-
 template <typename Comparator>
 static void
 block_update(int index, std::vector<std::list<light_string>> &data,
@@ -233,10 +203,11 @@ block_update(int index, std::vector<std::list<light_string>> &data,
 }
 
 template <typename Comparator>
-static std::string
-merge_pass(const std::vector<std::string> &filenames, int start, int end,
-           const std::string &tmp_dir, unsigned long block_size,
-           std::vector<std::vector<char>> &buffers, Comparator &) {
+static std::string merge_pass(const std::vector<std::string> &filenames,
+                              int start, int end, const std::string &tmp_dir,
+                              unsigned long block_size,
+                              std::vector<std::vector<char>> &buffers,
+                              bool remove_duplicates, Comparator &) {
 
   std::vector<std::unique_ptr<std::ifstream>> opened_files;
 
@@ -291,10 +262,16 @@ merge_pass(const std::vector<std::string> &filenames, int start, int end,
     block_update(i, data, opened_files, pqueue, block_size);
   }
 
+  light_string last_value;
   while (!pqueue.empty()) {
     auto &current = pqueue.top();
     int index = current.second;
-    ofs << current.first << '\n';
+    if (!remove_duplicates ||
+        (remove_duplicates && last_value != current.first)) {
+      ofs << current.first << '\n';
+    }
+
+    last_value = current.first;
     pqueue.pop();
     block_update(index, data, opened_files, pqueue, block_size);
   }
@@ -302,20 +279,20 @@ merge_pass(const std::vector<std::string> &filenames, int start, int end,
   ofs.flush();
   ofs.close();
 
-  
   for (int i = start; i < end; i++) {
     remove(filenames.at(i).c_str());
   }
-  
 
   return result_filename;
 }
 
 template <typename Comparator>
-static std::vector<std::string> merge_bottom_up(
-    const std::vector<std::string> &filenames, const std::string &tmp_dir,
-    int max_files, unsigned long block_size,
-    std::vector<std::vector<char>> &buffers, Comparator &comparator) {
+static std::vector<std::string>
+merge_bottom_up(const std::vector<std::string> &filenames,
+                const std::string &tmp_dir, int max_files,
+                unsigned long block_size,
+                std::vector<std::vector<char>> &buffers, bool remove_duplicates,
+                Comparator &comparator) {
   std::vector<std::string> result_filenames;
 
   int level_passes = (filenames.size() / max_files) +
@@ -324,7 +301,7 @@ static std::vector<std::string> merge_bottom_up(
     auto pass_file = merge_pass(
         filenames, current_pass * max_files,
         std::min<int>((current_pass + 1) * max_files, filenames.size()),
-        tmp_dir, block_size, buffers, comparator);
+        tmp_dir, block_size, buffers, remove_duplicates, comparator);
     result_filenames.push_back(pass_file);
   }
 
@@ -345,24 +322,31 @@ void external_sort(const std::string &input_filename,
                    const std::string &output_filename,
                    const std::string &tmp_dir, int workers, int max_files,
                    unsigned long memory_budget, unsigned long block_size,
-                   Comparator comparator) {
+                   bool remove_duplicates, Comparator comparator) {
 
   auto buffers = init_buffers(max_files, block_size);
 
   auto current_filenames =
       split_file(input_filename, tmp_dir, memory_budget, workers, buffers[0],
-                 buffers[max_files], comparator);
+                 buffers[max_files], remove_duplicates, comparator);
 
-  /*
-  std::cout << "started sorting files" << std::endl;
-  sort_files(current_filenames, workers, buffers[0], buffers[max_files],
-  comparator); std::cout << "finished sorting files" << std::endl;
-  */
   while (current_filenames.size() > 1) {
-    current_filenames = merge_bottom_up(current_filenames, tmp_dir, max_files,
-                                        block_size, buffers, comparator);
+    current_filenames =
+        merge_bottom_up(current_filenames, tmp_dir, max_files, block_size,
+                        buffers, remove_duplicates, comparator);
   }
-  rename(current_filenames[0].c_str(), output_filename.c_str());
+  auto from = std::filesystem::path(current_filenames[0]);
+  auto to = std::filesystem::path(output_filename);
+
+  try {
+    std::filesystem::rename(from, to);
+  } catch (const std::filesystem::filesystem_error &e) {
+    if (std::filesystem::exists(to)) {
+      std::filesystem::remove(to);
+    }
+    std::filesystem::copy_file(from, to);
+    std::filesystem::remove(from);
+  }
 }
 
 #endif /* _EXTERNAL_SORT_HPP_ */

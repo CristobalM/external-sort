@@ -46,7 +46,7 @@ class ParallelWorker {
 
 public:
   ParallelWorker(ParallelWorkerQueue &queue, std::mutex &shared_mutex,
-         std::condition_variable &queue_cv)
+                 std::condition_variable &queue_cv)
       : queue(queue), shared_mutex(shared_mutex), queue_cv(queue_cv),
         _stopped(false) {
     static int workers_count = 0;
@@ -59,7 +59,9 @@ public:
   void stop() { set_stopped(true); }
 
 private:
-  void start() { th = std::make_unique<std::thread>(&ParallelWorker::run, this); }
+  void start() {
+    th = std::make_unique<std::thread>(&ParallelWorker::run, this);
+  }
 
   bool stopped() {
     std::lock_guard<std::mutex> lg(mutex_stop);

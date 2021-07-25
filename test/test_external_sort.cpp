@@ -1,12 +1,11 @@
 #include <gtest/gtest.h>
 
-#include <sstream>
 #include <cmath>
-#include <fstream>
 #include <external_sort.hpp>
+#include <fstream>
+#include <sstream>
 
 #include <light_string.hpp>
-
 
 static std::string transform_int_to_str_padded(int value, int padding) {
   std::stringstream ss;
@@ -27,26 +26,26 @@ static std::string transform_int_to_str_padded(int value, int padding) {
 }
 
 struct Comparator {
-  
-  bool operator()(const light_string &lhs, const light_string &rhs){
+
+  bool operator()(const light_string &lhs, const light_string &rhs) {
     return lhs < rhs;
   }
 };
 
-TEST(ExternalSortSuite, test_1){
-
+TEST(ExternalSortSuite, test_1) {
 
   std::string debug_file_name("debug_file.txt");
   std::string output_file_name("output_file.txt");
   std::string tmp_dir("./");
   std::ofstream debug_file(debug_file_name, std::ios::out);
 
-
-  for(int i = 0; i < 10'000'000; i++){
+  for (int i = 0; i < 10'000'000; i++) {
     debug_file << transform_int_to_str_padded(i, 9) << '\n';
   }
   debug_file.close();
-  // external_sort_input_stream(ss, outputss, 1'000'000'000, 4, "./", Comparator());
+  // external_sort_input_stream(ss, outputss, 1'000'000'000, 4, "./",
+  // Comparator());
   Comparator comparator;
-  external_sort(debug_file_name, output_file_name, tmp_dir, 1, 10, 1'000'000, 500'000, comparator);
+  external_sort(debug_file_name, output_file_name, tmp_dir, 1, 10, 1'000'000,
+                500'000, false, comparator);
 }

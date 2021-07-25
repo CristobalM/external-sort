@@ -54,7 +54,8 @@ void inplace_quicksort(std::vector<T> &data, Comparator &comparator, int start,
   std::random_device random_device;
   std::mt19937 generator(random_device());
   std::uniform_int_distribution random_distr(start, end);
-  return inplace_quicksort(data, comparator, start, end, random_distr, generator);
+  return inplace_quicksort(data, comparator, start, end, random_distr,
+                           generator);
 }
 
 template <typename T, typename Comparator>
