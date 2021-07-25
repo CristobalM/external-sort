@@ -4,10 +4,10 @@
 #include <iterator>
 #include <stdexcept>
 
-#include "LightStringSortConnector.hpp"
+#include <UnsignedLongSortConnector.hpp>
+#include <cstdlib>
 #include <external_sort.hpp>
 #include <getopt.h>
-#include <stdlib.h>
 
 struct parsed_options {
   std::string input_file;
@@ -21,6 +21,10 @@ struct parsed_options {
 parsed_options parse_cmline(int argc, char **argv);
 unsigned long get_mem_total();
 
+void transform_to_binary(const std::string &input_fname,
+                         const std::string &output_fname);
+void transform_from_binary(const std::string &input_fname,
+                           const std::string &output_fname);
 int main(int argc, char **argv) {
   auto parsed = parse_cmline(argc, argv);
 
@@ -29,11 +33,49 @@ int main(int argc, char **argv) {
             << "max-memory: " << parsed.max_memory << "\n"
             << "tmp-dir: " << parsed.tmp_dir << std::endl;
 
-  std::ifstream ifs(parsed.input_file, std::ios::in);
-  std::ofstream ofs(parsed.output_file, std::ios::out | std::ios::trunc);
-  ExternalSort::ExternalSort<ExternalSort::LightStringSortConnector>::sort(
-      parsed.input_file, parsed.output_file, parsed.tmp_dir, parsed.workers, 10,
-      parsed.max_memory, 4096, parsed.remove_duplicates);
+  auto binary_converted_name = parsed.input_file + ".binary";
+  auto binary_out_converted_name = parsed.output_file + ".binary";
+
+  transform_to_binary(parsed.input_file, binary_converted_name);
+
+  ExternalSort::ExternalSort<
+      ExternalSort::UnsignedLongSortConnector,
+      ExternalSort::DATA_MODE::BINARY>::sort(binary_converted_name,
+                                             binary_out_converted_name,
+                                             parsed.tmp_dir, parsed.workers, 10,
+                                             parsed.max_memory, 4096,
+                                             parsed.remove_duplicates);
+
+  std::filesystem::remove(std::filesystem::path(binary_converted_name));
+
+  transform_from_binary(binary_out_converted_name, parsed.output_file);
+
+  std::filesystem::remove(std::filesystem::path(binary_out_converted_name));
+}
+void transform_from_binary(const std::string &input_fname,
+                           const std::string &output_fname) {
+  std::ifstream ifs(input_fname, std::ios::in | std::ios::binary);
+  std::ofstream ofs(output_fname, std::ios::out);
+
+  for (;;) {
+    unsigned long value;
+    ifs.read(reinterpret_cast<char *>(&value), sizeof(unsigned long));
+    if ((ifs.rdstate() & std::ifstream::eofbit) != 0)
+      break;
+    ofs << std::to_string(value) << '\n';
+  }
+}
+void transform_to_binary(const std::string &input_fname,
+                         const std::string &output_fname) {
+
+  std::ifstream ifs(input_fname, std::ios::in);
+  std::ofstream ofs(output_fname, std::ios::out | std::ios::binary);
+
+  std::string line;
+  while (std::getline(ifs, line)) {
+    auto value = std::stoul(line);
+    ofs.write(reinterpret_cast<char *>(&value), sizeof(unsigned long));
+  }
 }
 
 parsed_options parse_cmline(int argc, char **argv) {

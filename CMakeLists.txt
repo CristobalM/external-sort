@@ -4,9 +4,9 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 set(CMAKE_CXX_STANDARD 17)
 
-if(NOT CMAKE_BUILD_TYPE)
+if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
-endif()
+endif ()
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -std=c++17 -pedantic -Werror")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
@@ -14,24 +14,30 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 include_directories(include)
 
-add_executable(external_sort src/external_sort.cpp)
+add_executable(external_sort
+        src/external_sort.cpp
+        include/LightStringSortConnector.hpp )
+add_executable(external_sort_numbers
+        src/external_sort_numbers.cpp
+        include/UnsignedLongSortConnector.hpp)
 target_link_libraries(external_sort pthread)
+target_link_libraries(external_sort_numbers pthread)
 
 find_package(GTest QUIET)
-if(GTest_FOUND)
-enable_testing()
-include_directories(${GTEST_INCLUDE_DIRS})
+if (GTest_FOUND)
+    enable_testing()
+    include_directories(${GTEST_INCLUDE_DIRS})
 
 
-add_executable(test_external_sort test/test_external_sort.cpp)
-target_link_libraries(test_external_sort ${DEFAULT_LIBS} ${GTEST_BOTH_LIBRARIES} pthread)
+    add_executable(test_external_sort test/test_external_sort.cpp)
+    target_link_libraries(test_external_sort ${DEFAULT_LIBS} ${GTEST_BOTH_LIBRARIES} pthread)
 
-add_executable(test_inplace_quicksort test/test_inplace_quicksort.cpp)
-target_link_libraries(test_inplace_quicksort ${DEFAULT_LIBS} ${GTEST_BOTH_LIBRARIES} pthread)
-
-
-add_test(NAME test_external_sort COMMAND ./test_external_sort)
-add_test(NAME test_inplace_quicksort COMMAND ./test_inplace_quicksort)
+    add_executable(test_inplace_quicksort test/test_inplace_quicksort.cpp)
+    target_link_libraries(test_inplace_quicksort ${DEFAULT_LIBS} ${GTEST_BOTH_LIBRARIES} pthread)
 
 
-endif()
+    add_test(NAME test_external_sort COMMAND ./test_external_sort)
+    add_test(NAME test_inplace_quicksort COMMAND ./test_inplace_quicksort)
+
+
+endif ()

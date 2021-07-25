@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 
+#include <LightStringSortConnector.hpp>
 #include <light_string.hpp>
 
 static std::string transform_int_to_str_padded(int value, int padding) {
@@ -25,13 +26,6 @@ static std::string transform_int_to_str_padded(int value, int padding) {
   return ss.str();
 }
 
-struct Comparator {
-
-  bool operator()(const light_string &lhs, const light_string &rhs) {
-    return lhs < rhs;
-  }
-};
-
 TEST(ExternalSortSuite, test_1) {
 
   std::string debug_file_name("debug_file.txt");
@@ -45,7 +39,7 @@ TEST(ExternalSortSuite, test_1) {
   debug_file.close();
   // external_sort_input_stream(ss, outputss, 1'000'000'000, 4, "./",
   // Comparator());
-  Comparator comparator;
-  external_sort(debug_file_name, output_file_name, tmp_dir, 1, 10, 1'000'000,
-                500'000, false, comparator);
+  ExternalSort::ExternalSort<ExternalSort::LightStringSortConnector>::sort(
+      debug_file_name, output_file_name, tmp_dir, 1, 10, 1'000'000, 500'000,
+      false);
 }
