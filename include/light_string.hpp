@@ -10,27 +10,25 @@ class light_string {
   char *buf;
 
 public:
-  light_string() { buf = nullptr; }
+  light_string() : buf(nullptr) {}
   explicit light_string(char *s) {
     auto size = strlen(s);
-    buf = new char[size + 1];
+    buf = new char[size + 1]();
     strcpy(buf, s);
   }
   explicit light_string(const std::string &s) {
-    buf = new char[s.size() + 1];
+    buf = new char[s.size() + 1]();
     strcpy(buf, s.c_str());
   }
 
   ~light_string() {
-    if (buf) {
-      delete[] buf;
-      buf = nullptr;
-    }
+    delete[] buf;
+    buf = nullptr;
   }
 
   light_string(const light_string &other) noexcept {
     auto size = strlen(other.buf);
-    buf = new char[size + 1];
+    buf = new char[size + 1]();
     strcpy(buf, other.buf);
   }
 
@@ -39,22 +37,27 @@ public:
     std::swap(buf, other.buf);
   }
 
-  light_string &operator=(const light_string &other) noexcept {
-    auto size = strlen(other.buf);
-    buf = new char[size + 1];
-    strcpy(buf, other.buf);
+  light_string &operator=(const light_string &other) {
+    if (&other != this) {
+      auto size = strlen(other.buf);
+      delete[] buf;
+      buf = new char[size + 1];
+      strcpy(buf, other.buf);
+    }
     return *this;
   }
 
   light_string &operator=(light_string &&other) noexcept {
+    delete[] buf;
     buf = nullptr;
+
     std::swap(buf, other.buf);
     return *this;
   }
 
   bool operator==(const light_string &rhs) const {
     if (!buf)
-      return rhs.buf;
+      return false;
     return strcmp(buf, rhs.buf) == 0;
   }
 

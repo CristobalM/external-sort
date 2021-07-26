@@ -33,13 +33,18 @@ TEST(ExternalSortSuite, test_1) {
   std::string tmp_dir("./");
   std::ofstream debug_file(debug_file_name, std::ios::out);
 
-  for (int i = 0; i < 10'000'000; i++) {
+  for (int i = 100'000'000; i >= 0; i--) {
     debug_file << transform_int_to_str_padded(i, 9) << '\n';
   }
   debug_file.close();
-  // external_sort_input_stream(ss, outputss, 1'000'000'000, 4, "./",
-  // Comparator());
+  auto begin = std::chrono::steady_clock::now();
   ExternalSort::ExternalSort<ExternalSort::LightStringSortConnector>::sort(
-      debug_file_name, output_file_name, tmp_dir, 1, 10, 1'000'000, 500'000,
+      debug_file_name, output_file_name, tmp_dir, 1, 10, 3'000'000'000, 4096,
       false);
+  auto end = std::chrono::steady_clock::now();
+  std::cout << "Total = "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end -
+                                                                     begin)
+                   .count()
+            << "[ms]" << std::endl;
 }

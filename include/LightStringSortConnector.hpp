@@ -9,7 +9,7 @@
 namespace ExternalSort {
 
 struct LightStringSortConnector {
-  light_string input_string{};
+  light_string input_string;
 
 public:
   explicit LightStringSortConnector(light_string &&input_string)

@@ -12,7 +12,7 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra -std=c++17 -pedantic -Werror")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-include_directories(include)
+include_directories(include lib)
 
 add_executable(external_sort
         src/external_sort.cpp
