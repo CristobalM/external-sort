@@ -45,10 +45,6 @@ public:
     return value != other.value;
   }
 
-  bool operator<(const UnsignedLongSortConnector &other) const {
-    return value < other.value;
-  }
-
   static bool read_value(std::ifstream &ifs,
                          UnsignedLongSortConnector &next_val) {
     unsigned long value;

@@ -145,11 +145,10 @@ private:
         auto tc_ptr = std::make_unique<TC>(time_control);
         auto *tc_raw_ptr = tc_ptr.get();
         time_controls.push_back(std::move(tc_ptr));
-        pool.add_task(
-            [i, &offsets, &data, &comparator, &time_control, &tc_raw_ptr]() {
-              IntroSort<T, TC>::sort(data, comparator, *tc_raw_ptr, offsets[i],
-                                     offsets[i + 1]);
-            });
+        pool.add_task([i, &offsets, &data, &comparator, &tc_raw_ptr]() {
+          IntroSort<T, TC>::sort(data, comparator, *tc_raw_ptr, offsets[i],
+                                 offsets[i + 1]);
+        });
       }
 
       pool.stop_all_workers();
