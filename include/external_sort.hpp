@@ -76,6 +76,12 @@ public:
                    buffers[max_files], remove_duplicates, comparator,
                    time_control, active_files);
 
+    if constexpr (TC::with_time_control)
+      if (!time_control.tick()) {
+        clean_up_files(active_files);
+        return;
+      }
+
     while (current_filenames.size() > 1) {
       current_filenames = merge_bottom_up(
           current_filenames, tmp_dir, max_files, block_size, buffers,
@@ -227,6 +233,13 @@ private:
     filenames.push_back(filename);
     parallel_sort(data, workers, 100'000'000, remove_duplicates, comparator,
                   time_control);
+
+    if constexpr (TC::with_time_control)
+      if (!time_control.tick()) {
+        clean_up_files(active_files);
+        return;
+      }
+
     for (auto &line : data) {
       ofs << line;
     }
@@ -266,6 +279,9 @@ private:
                          accumulated_size, data, current_file_index, filenames,
                          remove_duplicates, comparator, time_control,
                          active_files);
+        if constexpr (TC::with_time_control)
+          if (!time_control.tick())
+            return std::vector<std::string>();
       }
       data.push_back(current_val);
       accumulated_size +=

@@ -1,12 +1,16 @@
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <cmath>
 #include <external_sort.hpp>
 #include <fstream>
 #include <sstream>
 
 #include <LightStringSortConnector.hpp>
+#include <TimeControl.hpp>
 #include <light_string.hpp>
+
+using namespace std::chrono_literals;
 
 static std::string transform_int_to_str_padded(int value, int padding) {
   std::stringstream ss;
@@ -42,6 +46,38 @@ TEST(ExternalSortSuite, test_1) {
       debug_file_name, output_file_name, tmp_dir, 1, 10, 3'000'000'000, 4096,
       false);
   auto end = std::chrono::steady_clock::now();
+  std::cout << "Total = "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end -
+                                                                     begin)
+                   .count()
+            << "[ms]" << std::endl;
+}
+
+TEST(a, b) {
+
+  std::string debug_file_name("debug_file.txt");
+  std::string output_file_name("output_file.txt");
+  std::string tmp_dir("./");
+  std::ofstream debug_file(debug_file_name, std::ios::out);
+
+  for (int i = 100'000'000; i >= 0; i--) {
+    debug_file << transform_int_to_str_padded(i, 9) << '\n';
+  }
+  debug_file.close();
+
+  TimeControl tc(1, 1ms);
+  tc.start_timer();
+
+  auto begin = std::chrono::steady_clock::now();
+  ExternalSort::LightStringSortConnector::Comparator cmp;
+  ExternalSort::ExternalSort<ExternalSort::LightStringSortConnector,
+                             ExternalSort::TEXT,
+                             TimeControl>::sort(debug_file_name,
+                                                output_file_name, tmp_dir, 1,
+                                                10, 3'000'000'000, 4096, false,
+                                                cmp, tc);
+  auto end = std::chrono::steady_clock::now();
+  std::cout << "tc finished ? " << tc.finished() << std::endl;
   std::cout << "Total = "
             << std::chrono::duration_cast<std::chrono::milliseconds>(end -
                                                                      begin)
