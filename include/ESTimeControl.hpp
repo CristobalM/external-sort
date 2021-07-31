@@ -2,14 +2,15 @@
 // Created by cristobal on 7/16/21.
 //
 
-#ifndef TIMECONTROL_HPP
-#define TIMECONTROL_HPP
+#ifndef ESTIMECONTROL_HPP
+#define ESTIMECONTROL_HPP
 
 #include <chrono>
 #include <memory>
 #include <string>
 
-class TimeControl {
+namespace ExternalSort {
+class ESTimeControl {
   long ticks_until_check;
   std::chrono::milliseconds time_duration;
 
@@ -34,12 +35,13 @@ public:
     }
     return true;
   }
-  TimeControl(long ticks_until_check, std::chrono::milliseconds time_duration)
+  ESTimeControl(long ticks_until_check, std::chrono::milliseconds time_duration)
       : ticks_until_check(ticks_until_check), time_duration(time_duration),
         current_ticks(0), time_has_passed(false) {}
   void start_timer() { starting_time = std::chrono::system_clock::now(); }
   bool finished() const { return !time_has_passed; }
   void tick_only_count() { current_ticks++; }
 };
+} // namespace ExternalSort
 
-#endif // TIMECONTROL_HPP
+#endif // ESTIMECONTROL_HPP

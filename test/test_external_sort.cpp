@@ -6,8 +6,8 @@
 #include <fstream>
 #include <sstream>
 
+#include <ESTimeControl.hpp>
 #include <LightStringSortConnector.hpp>
-#include <TimeControl.hpp>
 #include <light_string.hpp>
 
 using namespace std::chrono_literals;
@@ -65,17 +65,17 @@ TEST(a, b) {
   }
   debug_file.close();
 
-  TimeControl tc(1, 1ms);
+  ExternalSort::ESTimeControl tc(1, 1ms);
   tc.start_timer();
 
   auto begin = std::chrono::steady_clock::now();
   ExternalSort::LightStringSortConnector::Comparator cmp;
   ExternalSort::ExternalSort<ExternalSort::LightStringSortConnector,
                              ExternalSort::TEXT,
-                             TimeControl>::sort(debug_file_name,
-                                                output_file_name, tmp_dir, 1,
-                                                10, 3'000'000'000, 4096, false,
-                                                cmp, tc);
+                             ExternalSort::ESTimeControl>::sort(debug_file_name,
+                                                  output_file_name, tmp_dir, 1,
+                                                  10, 3'000'000'000, 4096,
+                                                  false, cmp, tc);
   auto end = std::chrono::steady_clock::now();
   std::cout << "tc finished ? " << tc.finished() << std::endl;
   std::cout << "Total = "
