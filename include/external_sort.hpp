@@ -17,6 +17,7 @@
 
 #include "introsort.hpp"
 
+#include "DefaultReader.hpp"
 #include "ParallelWorker.hpp"
 #include "UuidGenerator.hpp"
 #include "time_control.hpp"
@@ -26,7 +27,7 @@ namespace ExternalSort {
 namespace fs = std::filesystem;
 
 enum DATA_MODE { BINARY = 0, TEXT = 1 };
-template <typename T, DATA_MODE DM = TEXT, typename TC = NoTimeControl>
+template <typename T, DATA_MODE DM = TEXT, typename TC = NoTimeControl, typename Reader=DefaultReader>
 class ExternalSort {
   using pair_T_int = std::pair<T, int>;
 
@@ -272,8 +273,10 @@ private:
     std::vector<T> data;
 
     // std::string line;
+
+    Reader reader(input_file);
     T current_val;
-    while (T::read_value(input_file, current_val)) {
+    while (reader.read_value(current_val)) {
       if (accumulated_size >= (memory_budget / 3)) {
         create_file_part(input_filename, tmp_dir, workers, buffer_out,
                          accumulated_size, data, current_file_index, filenames,
