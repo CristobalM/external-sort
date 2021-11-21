@@ -52,3 +52,78 @@ TEST(IOHandlerWHeader, works_on_files_wheader) {
     ASSERT_EQ(value, i);
   }
 }
+
+TEST(IOHandlerWHeader, works_on_files_wheader_duplicates) {
+  const std::string ul_data("works_on_files_wheader.bin");
+  const std::string sorted_ul_data("works_on_files_wheader.sorted.bin");
+  const std::string tmp_dir("./");
+
+  const auto sz = 1'000'000L;
+  const auto repetition = 5L;
+  const auto total_sz = sz * repetition;
+  {
+    std::ofstream ofs(ul_data,
+                      std::ios::binary | std::ios::out | std::ios::trunc);
+    write_ul(ofs, total_sz);
+
+    for (long i = sz - 1; i > -1L; i--) {
+      for (long j = 0; j < repetition; j++) {
+        write_ul(ofs, i);
+      }
+    }
+  }
+
+  ExternalSort::ExternalSort<
+      ExternalSort::UnsignedLongSortConnectorWHeader, ExternalSort::BINARY,
+      ExternalSort::NoTimeControl,
+      ExternalSort::ULHeaderIOHandler>::sort(ul_data, sorted_ul_data, tmp_dir,
+                                             1, 10, 1'000'000, 4096, false);
+
+  std::ifstream ifs(sorted_ul_data, std::ios::in | std::ios::binary);
+
+  auto extracted_sz = read_ul(ifs);
+  ASSERT_EQ(extracted_sz, total_sz);
+  for (size_t i = 0; i < sz; i++) {
+    for (long j = 0; j < repetition; j++) {
+      auto value = read_ul(ifs);
+      ASSERT_EQ(value, i) << "failed at i = " << i;
+    }
+  }
+}
+
+TEST(IOHandlerWHeader, works_on_files_wheader_duplicates_remove_duplicates) {
+  const std::string ul_data("works_on_files_wheader.bin");
+  const std::string sorted_ul_data("works_on_files_wheader.sorted.bin");
+  const std::string tmp_dir("./");
+
+  const auto sz = 1'000'000L;
+  const auto repetition = 5L;
+  const auto total_sz = sz * repetition;
+  {
+    std::ofstream ofs(ul_data,
+                      std::ios::binary | std::ios::out | std::ios::trunc);
+    write_ul(ofs, total_sz);
+
+    for (long i = sz - 1; i >= 0; i--) {
+      for (long j = 0; j < repetition; j++) {
+        write_ul(ofs, i);
+      }
+    }
+  }
+
+  ExternalSort::ExternalSort<
+      ExternalSort::UnsignedLongSortConnectorWHeader, ExternalSort::BINARY,
+      ExternalSort::NoTimeControl,
+      ExternalSort::ULHeaderIOHandler>::sort(ul_data, sorted_ul_data, tmp_dir,
+                                             1, 10, 1'000'000, 4096, true);
+
+  std::ifstream ifs(sorted_ul_data, std::ios::in | std::ios::binary);
+
+  //  auto extracted_sz = read_ul(ifs);
+  read_ul(ifs);
+  //  ASSERT_EQ(extracted_sz, sz);
+  for (size_t i = 0; i < sz; i++) {
+    auto value = read_ul(ifs);
+    ASSERT_EQ(value, i) << "failed at i = " << i;
+  }
+}

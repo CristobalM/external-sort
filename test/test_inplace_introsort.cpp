@@ -44,7 +44,7 @@ static std::string transform_int_to_str_padded(unsigned long value,
   return ss.str();
 }
 
-TEST(inplace_quicksort, test_quick_sort_1_int) {
+TEST(inplace_introsort, test_intro_sort_1_int) {
   std::vector<IntAdapter> data;
 
   int max_value = 1000000;
@@ -82,7 +82,7 @@ TEST(inplace_quicksort, test_quick_sort_1_int) {
             << "[ms]" << std::endl;
 }
 
-TEST(inplace_quicksort, test_quick_sort_1_strings) {
+TEST(inplace_introsort, test_intro_sort_1_strings) {
   std::vector<StringAdapter> data;
   for (int i = 100000; i >= 0; i--) {
     data.emplace_back(transform_int_to_str_padded(i, 10));
@@ -93,5 +93,29 @@ TEST(inplace_quicksort, test_quick_sort_1_strings) {
 
   for (int i = 0; i <= 100000; i++) {
     ASSERT_EQ(data[i].value, transform_int_to_str_padded(i, 10));
+  }
+}
+
+TEST(inplace_introsort, test_intro_sort_duplicates) {
+  std::vector<IntAdapter> data;
+  const int repetitions = 10;
+  for (int i = 100000; i >= 0; i--) {
+    for (int j = 0; j < repetitions; j++) {
+      data.emplace_back(IntAdapter(i));
+    }
+  }
+  for (int i = 100000; i >= 0; i--) {
+    for (int j = 0; j < repetitions; j++) {
+      data.emplace_back(IntAdapter(i));
+    }
+  }
+
+  IntAdapter::Comparator comp;
+  ExternalSort::IntroSort<IntAdapter>::sort(data, comp);
+
+  for (int i = 0; i <= 100000; i++) {
+    for (int j = 0; j < 2 * repetitions; j++) {
+      ASSERT_EQ(data[i * 2 * repetitions + j].value, i);
+    }
   }
 }

@@ -33,7 +33,7 @@ if (GTest_FOUND)
     target_link_libraries(test_external_sort ${DEFAULT_LIBS} ${GTEST_BOTH_LIBRARIES} pthread)
     add_test(NAME test_external_sort COMMAND ./test_external_sort)
 
-    add_executable(test_inplace_quicksort test/test_inplace_quicksort.cpp)
+    add_executable(test_inplace_quicksort test/test_inplace_introsort.cpp)
     target_link_libraries(test_inplace_quicksort ${DEFAULT_LIBS} ${GTEST_BOTH_LIBRARIES} pthread)
     add_test(NAME test_inplace_quicksort COMMAND ./test_inplace_quicksort)
 

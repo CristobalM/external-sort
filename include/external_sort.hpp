@@ -278,8 +278,6 @@ private:
       data.reserve(memory_budget / T::size());
     }
 
-    // std::string line;
-
     typename IOHandler::Reader reader(input_file);
     T current_val;
 
@@ -319,14 +317,17 @@ private:
     return ss.str();
   }
 
-  static bool fill_with_file(std::list<T> &data_block,
-                             std::unique_ptr<std::ifstream> &input_file,
-                             unsigned long block_size, TC &time_control) {
+  static bool
+  fill_with_file(std::list<T> &data_block,
+                 std::unique_ptr<std::ifstream> &input_file,
+                 std::unique_ptr<typename IOHandler::Reader> &reader,
+                 unsigned long block_size, TC &time_control) {
 
     T current_value;
     unsigned long accumulated_size = 0;
     while (accumulated_size < block_size) {
-      if (!T::read_value(*input_file, current_value)) {
+
+      if (!reader->read_value(current_value)) {
         input_file = nullptr;
         break;
       }
@@ -343,12 +344,13 @@ private:
   static void block_update(
       int index, std::vector<std::list<T>> &data,
       std::vector<std::unique_ptr<std::ifstream>> &opened_files,
+      std::vector<std::unique_ptr<typename IOHandler::Reader>> &readers,
       std::priority_queue<pair_T_int, std::vector<pair_T_int>, PairComp>
           &priority_queue,
       unsigned long block_size, TC &time_control) {
     if (data[index].empty() && opened_files[index]) {
-      if (!fill_with_file(data[index], opened_files[index], block_size,
-                          time_control))
+      if (!fill_with_file(data[index], opened_files[index], readers[index],
+                          block_size, time_control))
         return;
     } else if (data[index].empty()) {
       return;
@@ -383,27 +385,29 @@ private:
       throw std::runtime_error("couldn't generate tmp file with name " +
                                result_filename);
 
-    std::ios_base::openmode open_mode;
-    if constexpr (DM == TEXT) {
-      open_mode = std::ios::out;
-    } else {
-      open_mode = std::ios::out | std::ios::binary;
-    }
-    std::ofstream ofs(result_filename, open_mode);
-    active_files.insert(result_filename);
+    std::ios_base::openmode open_mode_write;
+    std::ios_base::openmode open_mode_read;
 
-    ofs.rdbuf()->pubsetbuf(
-        buffers[buffers.size() - 1].data(),
-        static_cast<std::streamsize>(buffers[buffers.size() - 1].size()));
+    if constexpr (DM == TEXT) {
+      open_mode_write = std::ios::out;
+      open_mode_read = std::ios::in;
+    } else {
+      open_mode_write = std::ios::out | std::ios::binary;
+      open_mode_read = std::ios::in | std::ios::binary;
+    }
+
+    active_files.insert(result_filename);
 
     PairComp pair_cmp(comparator);
     std::priority_queue<pair_T_int, std::vector<pair_T_int>, PairComp> pqueue(
         pair_cmp);
 
     std::vector<std::unique_ptr<typename IOHandler::Reader>> readers;
+    readers.reserve(opened_files.size());
     for (int i = start; i < end; i++) {
 
-      auto ifs_ptr = std::make_unique<std::ifstream>(filenames[i], open_mode);
+      auto ifs_ptr =
+          std::make_unique<std::ifstream>(filenames[i], open_mode_read);
       ifs_ptr->rdbuf()->pubsetbuf(
           buffers[i - start].data(),
           static_cast<std::streamsize>(buffers[i - start].size()));
@@ -421,7 +425,7 @@ private:
       unsigned long accumulated_size = 0;
 
       std::list<T> current_block;
-      while (accumulated_size < block_size) {
+      while (accumulated_size <= block_size) {
         if (!reader->read_value(current_value)) {
           opened_files[i] = nullptr;
           break;
@@ -434,19 +438,28 @@ private:
     }
 
     for (int i = 0; i < static_cast<int>(data.size()); i++) {
-      block_update(i, data, opened_files, pqueue, block_size, time_control);
+      block_update(i, data, opened_files, readers, pqueue, block_size,
+                   time_control);
       if constexpr (TC::with_time_control)
         if (!time_control.tick())
           return "";
     }
 
+    std::ofstream ofs(result_filename, open_mode_write);
+
+    ofs.rdbuf()->pubsetbuf(
+        buffers[buffers.size() - 1].data(),
+        static_cast<std::streamsize>(buffers[buffers.size() - 1].size()));
+
     unsigned long written_values = 0;
     typename IOHandler::Writer writer(ofs, written_values);
     T last_value;
+    bool first = true;
     while (!pqueue.empty()) {
       auto &current = pqueue.top();
       int index = current.second;
-      if (!remove_duplicates || (last_value != current.first)) {
+      if (first || !remove_duplicates || (last_value != current.first)) {
+        first = false;
         // ofs << current.first;
         writer.write_value(current.first);
         written_values++;
@@ -454,7 +467,8 @@ private:
 
       last_value = current.first;
       pqueue.pop();
-      block_update(index, data, opened_files, pqueue, block_size, time_control);
+      block_update(index, data, opened_files, readers, pqueue, block_size,
+                   time_control);
     }
 
     writer.fix_headers(written_values);
@@ -490,7 +504,7 @@ private:
                      comparator, time_control, active_files);
       if constexpr (TC::with_time_control)
         if (!time_control.tick())
-          return std::vector<std::string>();
+          return {};
       result_filenames.push_back(pass_file);
     }
 
