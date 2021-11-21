@@ -4,6 +4,9 @@
 
 #ifndef EXTERNAL_SORT_ULHEADERIOHANDLER_HPP
 #define EXTERNAL_SORT_ULHEADERIOHANDLER_HPP
+
+#include <fstream>
+
 namespace ExternalSort {
 
 class ULHeaderIOHandler {
