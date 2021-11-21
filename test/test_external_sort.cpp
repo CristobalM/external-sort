@@ -3,12 +3,10 @@
 #include <chrono>
 #include <cmath>
 #include <external_sort.hpp>
-#include <fstream>
 #include <sstream>
 
 #include <ESTimeControl.hpp>
 #include <LightStringSortConnector.hpp>
-#include <light_string.hpp>
 
 using namespace std::chrono_literals;
 
@@ -37,7 +35,7 @@ TEST(ExternalSortSuite, test_1) {
   std::string tmp_dir("./");
   std::ofstream debug_file(debug_file_name, std::ios::out);
 
-  for (int i = 100'000'000; i >= 0; i--) {
+  for (int i = 10'000'000; i >= 0; i--) {
     debug_file << transform_int_to_str_padded(i, 9) << '\n';
   }
   debug_file.close();
@@ -60,7 +58,7 @@ TEST(a, b) {
   std::string tmp_dir("./");
   std::ofstream debug_file(debug_file_name, std::ios::out);
 
-  for (int i = 100'000'000; i >= 0; i--) {
+  for (int i = 10'000'000; i >= 0; i--) {
     debug_file << transform_int_to_str_padded(i, 9) << '\n';
   }
   debug_file.close();
@@ -70,12 +68,11 @@ TEST(a, b) {
 
   auto begin = std::chrono::steady_clock::now();
   ExternalSort::LightStringSortConnector::Comparator cmp;
-  ExternalSort::ExternalSort<ExternalSort::LightStringSortConnector,
-                             ExternalSort::TEXT,
-                             ExternalSort::ESTimeControl>::sort(debug_file_name,
-                                                  output_file_name, tmp_dir, 1,
-                                                  10, 3'000'000'000, 4096,
-                                                  false, cmp, tc);
+  ExternalSort::ExternalSort<
+      ExternalSort::LightStringSortConnector, ExternalSort::TEXT,
+      ExternalSort::ESTimeControl>::sort(debug_file_name, output_file_name,
+                                         tmp_dir, 1, 10, 3'000'000'000, 4096,
+                                         false, cmp, tc);
   auto end = std::chrono::steady_clock::now();
   std::cout << "tc finished ? " << tc.finished() << std::endl;
   std::cout << "Total = "

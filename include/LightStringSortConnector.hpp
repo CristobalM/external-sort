@@ -12,6 +12,8 @@ struct LightStringSortConnector {
   light_string input_string;
 
 public:
+  static constexpr bool fixed_size = false;
+
   explicit LightStringSortConnector(light_string &&input_string)
       : input_string(std::move(input_string)) {}
 

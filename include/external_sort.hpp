@@ -17,7 +17,7 @@
 
 #include "introsort.hpp"
 
-#include "DefaultReader.hpp"
+#include "DefaultIOHandler.hpp"
 #include "ParallelWorker.hpp"
 #include "UuidGenerator.hpp"
 #include "time_control.hpp"
@@ -27,7 +27,8 @@ namespace ExternalSort {
 namespace fs = std::filesystem;
 
 enum DATA_MODE { BINARY = 0, TEXT = 1 };
-template <typename T, DATA_MODE DM = TEXT, typename TC = NoTimeControl, typename Reader=DefaultReader>
+template <typename T, DATA_MODE DM = TEXT, typename TC = NoTimeControl,
+          typename IOHandler = DefaultIOHandler>
 class ExternalSort {
   using pair_T_int = std::pair<T, int>;
 
@@ -241,8 +242,10 @@ private:
         return;
       }
 
+    typename IOHandler::Writer writer(ofs, data.size());
     for (auto &line : data) {
-      ofs << line;
+      // ofs << line;
+      writer.write_value(line);
     }
     data.clear();
   }
@@ -271,20 +274,26 @@ private:
     unsigned long accumulated_size = 0;
 
     std::vector<T> data;
+    if constexpr (T::fixed_size) {
+      data.reserve(memory_budget / T::size());
+    }
 
     // std::string line;
 
-    Reader reader(input_file);
+    typename IOHandler::Reader reader(input_file);
     T current_val;
+
+    const auto memory_bound = T::fixed_size ? memory_budget : memory_budget / 3;
+
     while (reader.read_value(current_val)) {
-      if (accumulated_size >= (memory_budget / 3)) {
+      if (accumulated_size >= memory_bound) {
         create_file_part(input_filename, tmp_dir, workers, buffer_out,
                          accumulated_size, data, current_file_index, filenames,
                          remove_duplicates, comparator, time_control,
                          active_files);
         if constexpr (TC::with_time_control)
           if (!time_control.tick())
-            return std::vector<std::string>();
+            return {};
       }
       data.push_back(current_val);
       accumulated_size +=
@@ -335,7 +344,7 @@ private:
       int index, std::vector<std::list<T>> &data,
       std::vector<std::unique_ptr<std::ifstream>> &opened_files,
       std::priority_queue<pair_T_int, std::vector<pair_T_int>, PairComp>
-          &pqueue,
+          &priority_queue,
       unsigned long block_size, TC &time_control) {
     if (data[index].empty() && opened_files[index]) {
       if (!fill_with_file(data[index], opened_files[index], block_size,
@@ -345,7 +354,7 @@ private:
       return;
     }
     auto current_str = data[index].front();
-    pqueue.push({std::move(current_str), index});
+    priority_queue.push({std::move(current_str), index});
     data[index].pop_front();
   }
 
@@ -391,26 +400,30 @@ private:
     std::priority_queue<pair_T_int, std::vector<pair_T_int>, PairComp> pqueue(
         pair_cmp);
 
+    std::vector<std::unique_ptr<typename IOHandler::Reader>> readers;
     for (int i = start; i < end; i++) {
 
-      opened_files.push_back(
-          std::make_unique<std::ifstream>(filenames[i], open_mode));
-
-      opened_files.back()->rdbuf()->pubsetbuf(
+      auto ifs_ptr = std::make_unique<std::ifstream>(filenames[i], open_mode);
+      ifs_ptr->rdbuf()->pubsetbuf(
           buffers[i - start].data(),
           static_cast<std::streamsize>(buffers[i - start].size()));
+
+      auto reader = std::make_unique<typename IOHandler::Reader>(*ifs_ptr);
+      readers.push_back(std::move(reader));
+      opened_files.push_back(std::move(ifs_ptr));
     }
 
     std::vector<std::list<T>> data;
 
     T current_value;
-    for (auto &file : opened_files) {
+    for (size_t i = 0; i < readers.size(); i++) {
+      auto &reader = readers[i];
       unsigned long accumulated_size = 0;
 
       std::list<T> current_block;
       while (accumulated_size < block_size) {
-        if (!T::read_value(*file, current_value)) {
-          file = nullptr;
+        if (!reader->read_value(current_value)) {
+          opened_files[i] = nullptr;
           break;
         }
         accumulated_size +=
@@ -427,18 +440,24 @@ private:
           return "";
     }
 
+    unsigned long written_values = 0;
+    typename IOHandler::Writer writer(ofs, written_values);
     T last_value;
     while (!pqueue.empty()) {
       auto &current = pqueue.top();
       int index = current.second;
       if (!remove_duplicates || (last_value != current.first)) {
-        ofs << current.first;
+        // ofs << current.first;
+        writer.write_value(current.first);
+        written_values++;
       }
 
       last_value = current.first;
       pqueue.pop();
       block_update(index, data, opened_files, pqueue, block_size, time_control);
     }
+
+    writer.fix_headers(written_values);
 
     ofs.flush();
     ofs.close();

@@ -31,13 +31,16 @@ if (GTest_FOUND)
 
     add_executable(test_external_sort test/test_external_sort.cpp)
     target_link_libraries(test_external_sort ${DEFAULT_LIBS} ${GTEST_BOTH_LIBRARIES} pthread)
+    add_test(NAME test_external_sort COMMAND ./test_external_sort)
 
     add_executable(test_inplace_quicksort test/test_inplace_quicksort.cpp)
     target_link_libraries(test_inplace_quicksort ${DEFAULT_LIBS} ${GTEST_BOTH_LIBRARIES} pthread)
-
-
-    add_test(NAME test_external_sort COMMAND ./test_external_sort)
     add_test(NAME test_inplace_quicksort COMMAND ./test_inplace_quicksort)
+
+    add_executable(test_iohandler_custom_constructor test/test_iohandler_custom_constructor.cpp)
+    target_link_libraries(test_iohandler_custom_constructor ${DEFAULT_LIBS} ${GTEST_BOTH_LIBRARIES} pthread)
+    add_test(NAME test_iohandler_custom_constructor COMMAND ./test_iohandler_custom_constructor)
+
 
 
 endif ()

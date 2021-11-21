@@ -11,6 +11,8 @@ class UnsignedLongSortConnector {
   unsigned long value;
 
 public:
+  static constexpr bool fixed_size = true;
+
   explicit UnsignedLongSortConnector(unsigned long value) : value(value) {}
 
   UnsignedLongSortConnector() : value(0) {}
