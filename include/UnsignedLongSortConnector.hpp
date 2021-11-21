@@ -5,6 +5,8 @@
 #ifndef EXTERNAL_SORT_UNSIGNEDLONGSORTCONNECTOR_HPP
 #define EXTERNAL_SORT_UNSIGNEDLONGSORTCONNECTOR_HPP
 
+#include <fstream>
+
 namespace ExternalSort {
 
 class UnsignedLongSortConnector {
