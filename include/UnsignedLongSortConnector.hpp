@@ -6,6 +6,7 @@
 #define EXTERNAL_SORT_UNSIGNEDLONGSORTCONNECTOR_HPP
 
 #include <fstream>
+#include <cstddef>
 
 namespace ExternalSort {
 

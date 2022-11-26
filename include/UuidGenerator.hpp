@@ -5,6 +5,10 @@
 #ifndef EXTERNAL_SORT_UUIDGENERATOR_HPP
 #define EXTERNAL_SORT_UUIDGENERATOR_HPP
 
+#include <string>
+#include <sstream>
+#include <random>
+
 namespace ExternalSort {
 
 std::string generate_uuid_v4() {

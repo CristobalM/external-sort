@@ -5,6 +5,10 @@
 #ifndef EXTERNAL_SORT_LIGHTSTRINGSORTCONNECTOR_HPP
 #define EXTERNAL_SORT_LIGHTSTRINGSORTCONNECTOR_HPP
 
+#include <cstddef>
+#include <fstream>
+#include <string>
+
 #include "light_string.hpp"
 namespace ExternalSort {
 

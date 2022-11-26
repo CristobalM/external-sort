@@ -5,7 +5,8 @@
 #ifndef EXTERNAL_SORT_DEFAULTIOHANDLER_HPP
 #define EXTERNAL_SORT_DEFAULTIOHANDLER_HPP
 
-#include <istream>
+#include <fstream>
+
 namespace ExternalSort {
 class DefaultIOHandler {
 public:
