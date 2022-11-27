@@ -11,7 +11,7 @@
 
 namespace ExternalSort {
 
-std::string generate_uuid_v4() {
+inline std::string generate_uuid_v4() {
 
   static std::random_device rd;
   static std::mt19937 gen(rd());
